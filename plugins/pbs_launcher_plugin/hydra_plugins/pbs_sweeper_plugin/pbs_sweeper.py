@@ -57,19 +57,17 @@ class PBSSweeper(Sweeper):
         task_function: TaskFunction,
         config: DictConfig,
     ) -> None:
-        self.config = config
-        self.launcher = Plugins.instance().instantiate_launcher(
-            hydra_context=hydra_context, task_function=task_function, config=config
-        )
-        self.hydra_context = hydra_context
-
-    def sweep(self, arguments: List[str]) -> Any:
         from pbs4py import PBS
         # TODO: Queue name and params and do dirs as well
-        pbs = PBS(queue_name='common_cpuQ', ncpus_per_node=1, time=8, mem='16gb')
+        self.config = config
+        self.hydra_context = hydra_context
+        self.launcher = PBS(queue_name='common_cpuQ', ncpus_per_node=1, time=8, mem='16gb')
 
+    def sweep(self, arguments: List[str]) -> Any:
+
+        print(self.config.hydra.run.dir)
+        
         assert self.config is not None
-        assert self.launcher is not None
         log.info(f"PBSSweeper (foo={self.foo}, bar={self.bar}) sweeping")
         log.info(f"Sweep output dir : {self.config.hydra.sweep.dir}")
 
@@ -101,33 +99,9 @@ class PBSSweeper(Sweeper):
                 lists.append([f"{key}={value}"])
         batches = list(itertools.product(*lists))
 
-        # some sweepers will launch multiple batches.
-        # for such sweepers, it is important that they pass the proper initial_job_idx when launching
-        # each batch. see example below.
-        # This is required to ensure that working that the job gets a unique job id
-        # (which in turn can be used for other things, like the working directory)
-        def chunks(
-            lst: Sequence[Sequence[str]], n: Optional[int]
-        ) -> Iterable[Sequence[Sequence[str]]]:
-            """
-            Split input to chunks of up to n items each
-            """
-            if n is None or n == -1:
-                n = len(lst)
-            for i in range(0, len(lst), n):
-                yield lst[i : i + n]
-		
-        
-        chunked_batches = list(chunks(batches, self.max_batch_size))
-
         returns = []
-        initial_job_idx = 0
-        for batch in chunked_batches:
-            self.validate_batch_is_legal(batch)
-        # job_script = "python src/main.py " + ' '.join(job_override)
-            out = pbs.launch(job_name='hydra_job',job_body=['echo sa'])
+        for idx, batch in enumerate(batches):
+            self.validate_batch_is_legal([batch])
+            job_script = "python src/main.py " + f"hydra.run.dir={self.config.hydra.sweep.dir}/{idx} " + ' '.join(batch)
+            out = self.launcher.launch(job_name=f"hydra_job_{idx}", job_body=[job_script])
             log.info(out)
-            #results = self.launcher.launch(batch, initial_job_idx=initial_job_idx)
-            initial_job_idx += len(batch)
-            #returns.append(results)
-        #return returns
