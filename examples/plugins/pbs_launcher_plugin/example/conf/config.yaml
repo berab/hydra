@@ -1,0 +1,5 @@
+defaults:
+  - db: mysql
+  - override hydra/sweeper: pbs
+task: 3
+dir: 
