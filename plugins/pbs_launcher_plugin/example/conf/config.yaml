@@ -1,5 +1,15 @@
 defaults:
   - db: mysql
   - override hydra/sweeper: pbs
+
 task: 3
-dir: 
+
+hydra:
+  sweeper:
+    queue_name: common_cpuQ
+    ncpus_per_node: 1
+    ngpus_per_node: 0
+    queue_node_limit: 10
+    time: 8
+    mem: 16
+    profile_file: ~/.bashrc # Sources before starting
