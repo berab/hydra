@@ -25,6 +25,7 @@ class LauncherConfig:
     _target_: str = (
         "hydra_plugins.pbs_sweeper_plugin.pbs_sweeper.PBSSweeper"
     )
+    job_name: str = "hydra_pbs_job"
     queue_name: str = "common_cpuQ"
     ncpus_per_node: int = 1
     ngpus_per_node: int = 0
@@ -38,12 +39,13 @@ ConfigStore.instance().store(group="hydra/sweeper", name="pbs", node=LauncherCon
 
 
 class PBSSweeper(Sweeper):
-    def __init__(self, queue_name: str, ncpus_per_node: int, ngpus_per_node: int,
+    def __init__(self, job_name:str, queue_name: str, ncpus_per_node: int, ngpus_per_node: int,
                   queue_node_limit: int, time: int, mem: int, profile_file: str):
         self.config: Optional[DictConfig] = None
         self.launcher: Optional[Launcher] = None
         self.hydra_context: Optional[HydraContext] = None
         self.job_results = None
+        self.job_name = job_name
         self.queue_name = queue_name
         self.ncpus_per_node = ncpus_per_node
         self.ngpus_per_node = ngpus_per_node
@@ -74,7 +76,7 @@ class PBSSweeper(Sweeper):
     def sweep(self, arguments: List[str]) -> Any:
 
         assert self.config is not None
-        log.info(f"PBSSweeper sweeping @{self.queue_name}")
+        log.info(f"PBSSweeper sweeping {self.job_name} @{self.queue_name}")
 
         # Save sweep run config in top level sweep working directory
         sweep_dir = Path(self.config.hydra.sweep.dir)
@@ -102,5 +104,5 @@ class PBSSweeper(Sweeper):
             run_dir = Path(f"{self.config.hydra.sweep.dir}/{idx}")
             run_dir.mkdir(exist_ok=True)
             job_script = "python src/main.py " + f"hydra.run.dir={self.config.hydra.sweep.dir}/{idx} " + ' '.join(batch)
-            out = self.launcher.launch(run_dir=run_dir, job_name=f"hydra_job_{idx}", job_body=[job_script], blocking=False)
+            out = self.launcher.launch(run_dir=run_dir, job_name=f"{self.job_name}_{idx}", job_body=[job_script], blocking=False)
             log.info(out)

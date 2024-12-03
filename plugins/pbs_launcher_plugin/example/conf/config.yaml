@@ -6,6 +6,7 @@ task: 3
 
 hydra:
   sweeper:
+    job_name: hydra_pbs_job
     queue_name: common_cpuQ
     ncpus_per_node: 1
     ngpus_per_node: 0
