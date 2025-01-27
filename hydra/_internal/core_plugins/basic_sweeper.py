@@ -62,7 +62,7 @@ class BasicSweeper(Sweeper):
         """
         Instantiates
         """
-        super().__init__()
+        super(BasicSweeper, self).__init__()
 
         if params is None:
             params = {}
@@ -107,6 +107,7 @@ class BasicSweeper(Sweeper):
     def split_arguments(
         overrides: List[Override], max_batch_size: Optional[int]
     ) -> List[List[List[str]]]:
+
         lists = []
         final_overrides = OrderedDict()
         for override in overrides:
@@ -150,7 +151,11 @@ class BasicSweeper(Sweeper):
         assert self.hydra_context is not None
 
         params_conf = self._parse_config()
+        arg_names = [arg.split('=')[0] for arg in arguments]
         params_conf.extend(arguments)
+        
+        splitted_overrides = [arg.split('=') for arg in arguments]
+        sweeped_overrides = [arg_name for arg_name, sweeps in splitted_overrides if len(sweeps.split(',')) > 1]
 
         parser = OverridesParser.create(config_loader=self.hydra_context.config_loader)
         overrides = parser.parse_overrides(params_conf)
@@ -174,6 +179,10 @@ class BasicSweeper(Sweeper):
             log.debug(
                 f"Validated configs of {len(batch)} jobs in {elapsed:0.2f} seconds, {len(batch)/elapsed:.2f} / second)"
             )
+            if 'run_name' not in arg_names:
+                for b in batch:
+                    run_name = '|'.join([override.replace('=', '\=') for override in b if override.split('=')[0] in sweeped_overrides])
+                    b.append(f'run_name={run_name}')
             results = self.launcher.launch(batch, initial_job_idx=initial_job_idx)
 
             for r in results:
