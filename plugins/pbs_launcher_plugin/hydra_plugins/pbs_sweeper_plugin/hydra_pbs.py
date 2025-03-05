@@ -14,13 +14,13 @@ class HydraPBSLauncher(PBS):
         mem: str = "16gb",
         profile_file: str = "~/.bashrc",
     ):
-        super().__init__(queue_name = "common_cpuQ",
-                         ncpus_per_node = 1,
-                         ngpus_per_node = 0,
-                         queue_node_limit = 10,
-                         time = 8,
-                         mem = "16gb",
-                         profile_file = "~/.bashrc")
+        super().__init__(queue_name = queue_name,
+                         ncpus_per_node = ncpus_per_node,
+                         ngpus_per_node = ngpus_per_node,
+                         queue_node_limit = queue_node_limit,
+                         time = time,
+                         mem = mem,
+                         profile_file = profile_file)
 
     def launch(self, run_dir: str, job_name: str, job_body: List[str],
                blocking: bool = True, dependency: str = None) -> str:
