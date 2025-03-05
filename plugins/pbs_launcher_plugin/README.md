@@ -1,4 +1,8 @@
 # Hydra PBS Launcher plugin
+## Installation:
+```bash
+pip install .
+```
 
 #### Example app using custom sweeper:
 ```text
