@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 
 import os
+import subprocess
 import itertools
 import logging
 from pathlib import Path
@@ -101,8 +102,16 @@ class PBSSweeper(Sweeper):
         self.validate_batch_is_legal(batches)
 
         for idx, batch in enumerate(batches):
+            username, max_queue, sleep_sec = os.environ["USER"], 30, 60
             run_dir = Path(f"{self.config.hydra.sweep.dir}/{idx}")
             run_dir.mkdir(exist_ok=True)
-            job_script = "python src/main.py " + f"hydra.run.dir={self.config.hydra.sweep.dir}/{idx} " + ' '.join(batch)
+            queue_cmd = f"qstat | grep {username} | wc -l"
+            n_queue = int(subprocess.run(queue_cmd, shell=True, text=True, capture_output=True).stdout)
+            while n_queue >= max_queue:
+                time.sleep(sleep_sec)
+                n_queue = int(subprocess.run(queue_cmd, shell=True, text=True, capture_output=True).stdout)
+            swept_batch = [override for override in simpler_batch if override.split('=')[0] in sweep_keys]
+            run_name, overrides = '|'.join([override.replace('=', '\=') for override in swept_batch]), ' '.join(batch)
+            job_script = "python src/main.py " + f"hydra.run.dir={self.config.hydra.sweep.dir}/{idx} run_name='{run_name}' {overrides}"
             out = self.launcher.launch(run_dir=run_dir, job_name=f"{self.job_name}_{idx}", job_body=[job_script], blocking=False)
-            log.info(out)
+            log.info(f"{out}: {overrides}")
